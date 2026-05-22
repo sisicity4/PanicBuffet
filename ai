@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export OLLAMA_API_BASE="${OLLAMA_API_BASE:-http://127.0.0.1:11434}"
+
+exec "${AIDER_BIN:-/Users/taiga/.local/bin/aider}" \
+  --no-check-update \
+  --analytics-disable \
+  --yes-always \
+  --no-gui \
+  --model ollama/qwen2.5-coder:7b \
+  --edit-format diff \
+  "$@"
