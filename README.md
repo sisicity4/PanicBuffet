@@ -1,12 +1,13 @@
-<p align="center">
-  <img src="docs/cover.svg" alt="Panic Buffet" width="100%">
-</p>
-
 <h1 align="center">🍽️ Panic Buffet</h1>
 
 <p align="center">
   食べ放題ビュッフェの店長になって、<b>3分間</b>お客の波をさばくブラウザ向けアーケードゲーム。<br>
   依存ゼロ・<b>Vite + TypeScript + Canvas</b> だけで作った軽量プロトタイプです。
+</p>
+
+<p align="center">
+  <img src="docs/demo.gif" alt="Panic Buffet gameplay" width="600"><br>
+  <sub>▲ 実際のプレイ画面（タイトル → ラッシュをさばく様子）</sub>
 </p>
 
 <p align="center">
