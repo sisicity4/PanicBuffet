@@ -1,7 +1,8 @@
-import { CONFIG, CUSTOMER_EMOJIS, FOOD_ORDER } from './state'
-import type { FoodId, GameState } from './types'
+import { CONFIG, CUSTOMER_EMOJIS, DIFFICULTY_ORDER, FOOD_ORDER, TUNINGS } from './state'
+import type { Difficulty, FoodId, GameState } from './types'
 
 type RefillHandler = (food: FoodId) => void
+type DifficultyHandler = (difficulty: Difficulty) => void
 
 interface RendererElements {
   root: HTMLDivElement
@@ -20,6 +21,8 @@ interface RendererElements {
   resultHigh: HTMLDivElement
   resultRecord: HTMLDivElement
   titleHigh: HTMLSpanElement
+  diffButtons: Record<Difficulty, HTMLButtonElement>
+  diffBlurb: HTMLParagraphElement
 }
 
 interface StockRow {
@@ -43,8 +46,9 @@ export function createRenderer(
   onStart: () => void,
   onRestart: () => void,
   onRefill: RefillHandler,
+  onSelectDifficulty: DifficultyHandler,
 ): Renderer {
-  const elements = createDom(app, onStart, onRestart, onRefill)
+  const elements = createDom(app, onStart, onRestart, onRefill, onSelectDifficulty)
   const context = elements.canvas.getContext('2d')
   if (!context) {
     throw new Error('Canvas 2D context is unavailable')
@@ -76,6 +80,7 @@ function createDom(
   onStart: () => void,
   onRestart: () => void,
   onRefill: RefillHandler,
+  onSelectDifficulty: DifficultyHandler,
 ): RendererElements {
   app.innerHTML = ''
 
@@ -95,6 +100,27 @@ function createDom(
     </div>
     <p class="high-note">最高スコア <span data-title-high>0</span></p>
   `
+
+  const difficultyWrap = document.createElement('div')
+  difficultyWrap.className = 'difficulty'
+  const diffButtons = {} as Record<Difficulty, HTMLButtonElement>
+  for (const id of DIFFICULTY_ORDER) {
+    const tuning = TUNINGS[id]
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'diff-button'
+    button.dataset.diff = id
+    button.innerHTML = `<span class="diff-emoji">${tuning.emoji}</span><span class="diff-name">${tuning.label}</span>`
+    button.addEventListener('click', () => onSelectDifficulty(id))
+    diffButtons[id] = button
+    difficultyWrap.append(button)
+  }
+  const diffBlurb = document.createElement('p')
+  diffBlurb.className = 'diff-blurb'
+  const highNote = title.querySelector('.high-note') as HTMLParagraphElement
+  title.insertBefore(difficultyWrap, highNote)
+  title.insertBefore(diffBlurb, highNote)
+
   const startButton = document.createElement('button')
   startButton.className = 'primary-button'
   startButton.id = 'start-btn'
@@ -193,6 +219,8 @@ function createDom(
     resultHigh: result.querySelector('[data-result-high]') as HTMLDivElement,
     resultRecord: result.querySelector('[data-result-record]') as HTMLDivElement,
     titleHigh: title.querySelector('[data-title-high]') as HTMLSpanElement,
+    diffButtons,
+    diffBlurb,
   }
 }
 
@@ -203,35 +231,42 @@ function renderDom(elements: RendererElements, state: GameState): void {
   elements.result.hidden = state.scene !== 'result'
   elements.root.style.setProperty('--shake-x', `${state.shakeTime > 0 ? Math.sin(state.backgroundTime * 75) * 5 : 0}px`)
 
+  for (const id of DIFFICULTY_ORDER) {
+    elements.diffButtons[id].classList.toggle('active', state.difficulty === id)
+  }
+  elements.diffBlurb.textContent = state.tuning.blurb
+
   elements.titleHigh.textContent = formatNumber(state.highScore)
   elements.hudTime.textContent = state.timeRemaining.toFixed(1)
   elements.hudScore.textContent = formatNumber(state.score)
-  elements.hudCombo.textContent = `${state.combo} x${Math.min(CONFIG.maxComboMultiplier, 1 + state.combo * 0.1).toFixed(1)}`
+  elements.hudCombo.textContent = `${state.combo} x${Math.min(CONFIG.maxComboMultiplier, 1 + state.combo * CONFIG.comboStep).toFixed(1)}`
   elements.hudHigh.textContent = formatNumber(state.highScore)
   elements.hudTime.parentElement?.classList.toggle('danger', state.timeRemaining <= 10)
   elements.hudCombo.parentElement?.classList.toggle('bounce', state.comboPulse > 0)
 
   const head = state.customers[0]
-  const progress = head ? Math.min(1, state.autoServeTimer / CONFIG.cookTime) : 0
+  const progress = head ? Math.min(1, state.autoServeTimer / state.tuning.cookTime) : 0
   elements.autoServeBar.style.transform = `scaleX(${progress})`
 
   for (const id of FOOD_ORDER) {
     const food = state.foods[id]
     const row = elements.stockRows[id]
     const rounded = Math.round(food.displayStock)
+    // Hard mode gates every station on the single shared kitchen timer.
+    const effectiveCooldown = state.tuning.sharedKitchen ? state.kitchenCooldown : food.cooldown
     row.card.classList.toggle('low', food.stock <= CONFIG.lowStockThreshold)
     row.card.classList.toggle('pressed', food.pressPulse > 0)
     row.fill.style.transform = `scaleX(${Math.max(0, Math.min(100, food.displayStock)) / 100})`
     row.percent.textContent = `${rounded}%`
     row.card.querySelector('.stock-food')!.textContent = `${food.emoji} ${food.label} (${food.key})`
-    row.button.disabled = food.cooldown > 0
+    row.button.disabled = effectiveCooldown > 0
     row.button.setAttribute('aria-label', `${food.label}を補充`)
-    row.cooldown.style.transform = `scaleX(${food.cooldown / CONFIG.refillCooldown})`
+    row.cooldown.style.transform = `scaleX(${Math.min(1, effectiveCooldown / state.tuning.refillCooldown)})`
   }
 
   elements.resultScore.textContent = `${formatNumber(state.score)} pts`
   elements.resultRank.textContent = state.rank
-  elements.resultHigh.textContent = `最高 ${formatNumber(state.highScore)}`
+  elements.resultHigh.textContent = `最高 ${formatNumber(state.highScore)} ・ ${state.tuning.emoji} ${state.tuning.label}`
   elements.resultRecord.textContent = state.newRecord ? '最高更新！' : ''
   elements.result.classList.toggle('new-record', state.newRecord)
 }

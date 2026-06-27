@@ -4,6 +4,30 @@ export type FoodId = 'pizza' | 'pasta' | 'drink'
 
 export type Rank = 'S' | 'A' | 'B' | 'C' | 'D'
 
+export type Difficulty = 'easy' | 'normal' | 'hard'
+
+/** Difficulty-sensitive knobs. Invariants (duration, scoring) stay in CONFIG. */
+export interface Tuning {
+  label: string
+  emoji: string
+  blurb: string
+  patienceDrainPerSecond: number
+  patienceDrainRamp: number
+  startStock: number
+  /** Buffet self-service: each waiting guest nibbles this much of their food/sec. */
+  nibblePerSecond: number
+  serveCost: number
+  refillAmount: number
+  refillCooldown: number
+  cookTime: number
+  spawnStart: number
+  spawnEnd: number
+  lostPenalty: number
+  /** Hard mode: one shared kitchen timer — only one station can restock at a time. */
+  sharedKitchen: boolean
+  rankThresholds: { S: number; A: number; B: number; C: number }
+}
+
 export interface Food {
   id: FoodId
   emoji: string
@@ -51,10 +75,14 @@ export interface InputState {
   refillRequests: Partial<Record<FoodId, boolean>>
   startRequested: boolean
   restartRequested: boolean
+  selectedDifficulty?: Difficulty
 }
 
 export interface GameState {
   scene: Scene
+  difficulty: Difficulty
+  tuning: Tuning
+  kitchenCooldown: number
   foods: Record<FoodId, Food>
   customers: Customer[]
   departing: DepartingCustomer[]

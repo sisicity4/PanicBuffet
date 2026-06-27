@@ -1,5 +1,6 @@
 export type {
   Customer,
+  Difficulty,
   FloatingText,
   Food,
   FoodId,
@@ -7,7 +8,17 @@ export type {
   InputState,
   Rank,
   Scene,
+  Tuning,
 } from './types'
-export { CONFIG, FOOD_ORDER, createInitialState, getRank, readHighScore, writeHighScore } from './state'
+export {
+  CONFIG,
+  DIFFICULTY_ORDER,
+  FOOD_ORDER,
+  TUNINGS,
+  createInitialState,
+  getRank,
+  readHighScore,
+  writeHighScore,
+} from './state'
 export { update } from './update'
 export { createRenderer } from './render'

@@ -1,10 +1,10 @@
 import './style.css'
 import {
-  CONFIG,
   FOOD_ORDER,
   createInitialState,
   createRenderer,
   update,
+  type Difficulty,
   type FoodId,
   type GameState,
   type InputState,
@@ -30,7 +30,13 @@ if (!app) {
 }
 const appElement = app
 
-const renderer = createRenderer(appElement, requestStart, requestRestart, requestRefill)
+const renderer = createRenderer(
+  appElement,
+  requestStart,
+  requestRestart,
+  requestRefill,
+  requestSelectDifficulty,
+)
 renderer.render(state)
 
 let lastTime = performance.now()
@@ -72,10 +78,15 @@ function requestRefill(food: FoodId): void {
   input.refillRequests[food] = true
 }
 
+function requestSelectDifficulty(difficulty: Difficulty): void {
+  input.selectedDifficulty = difficulty
+}
+
 function clearTransientInput(): void {
   input.startRequested = false
   input.restartRequested = false
   input.refillRequests = {}
+  input.selectedDifficulty = undefined
 }
 
 function handleKeyDown(event: KeyboardEvent): void {
@@ -115,13 +126,17 @@ function renderGameToText(gameState: GameState): string {
   return JSON.stringify({
     coordinateSystem: 'canvas origin top-left, x right, y down, width 960, height 430',
     scene: gameState.scene,
+    difficulty: gameState.difficulty,
     timeRemaining: Number(gameState.timeRemaining.toFixed(2)),
     score: gameState.score,
     combo: gameState.combo,
     highScore: gameState.highScore,
     rank: gameState.rank,
     newRecord: gameState.newRecord,
-    autoServeProgress: Number(Math.min(1, gameState.autoServeTimer / CONFIG.cookTime).toFixed(2)),
+    autoServeProgress: Number(
+      Math.min(1, gameState.autoServeTimer / gameState.tuning.cookTime).toFixed(2),
+    ),
+    kitchenCooldown: Number(gameState.kitchenCooldown.toFixed(2)),
     departing: gameState.departing.length,
     foods: FOOD_ORDER.map((id) => ({
       id,
