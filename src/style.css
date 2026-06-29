@@ -464,6 +464,253 @@ h1 {
   }
 }
 
+/* ── 実績トグルボタン ────────────────────────────────────────────── */
+
+.achievements-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border: 1.5px solid rgba(102, 75, 61, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #6f594f;
+  font-weight: 800;
+  font-size: 15px;
+  cursor: pointer;
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    background 140ms ease;
+}
+
+.achievements-toggle:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(102, 75, 61, 0.12);
+  background: #fff;
+}
+
+.achievements-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ff7a59, #ef4d68);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+/* ── 実績パネル（タイトル画面） ──────────────────────────────────── */
+
+.achievements-panel {
+  width: 100%;
+  max-width: 560px;
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 18px 45px rgba(110, 75, 56, 0.12);
+  backdrop-filter: blur(14px);
+  animation: slideDown 220ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.achievements-panel-header {
+  position: sticky;
+  top: 0;
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid rgba(102, 75, 61, 0.08);
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 20px 20px 0 0;
+  font-weight: 900;
+  font-size: 15px;
+  color: #4d382f;
+}
+
+.achievements-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+}
+
+.ach-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  transition: background 120ms ease;
+}
+
+.ach-item.unlocked {
+  background: rgba(52, 200, 138, 0.08);
+}
+
+.ach-item.locked {
+  opacity: 0.55;
+}
+
+.ach-emoji {
+  font-size: 28px;
+  flex-shrink: 0;
+  width: 36px;
+  text-align: center;
+}
+
+.locked-emoji {
+  font-size: 20px;
+  opacity: 0.6;
+}
+
+.ach-info {
+  text-align: left;
+  min-width: 0;
+}
+
+.ach-name {
+  font-weight: 850;
+  font-size: 14px;
+  color: #3a2b25;
+}
+
+.ach-desc {
+  font-size: 12px;
+  color: #7a6258;
+  line-height: 1.4;
+}
+
+/* ── リザルト画面: 新規解除実績 ─────────────────────────────────── */
+
+.result-achievements {
+  width: 100%;
+  max-width: 480px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 12px 16px;
+  text-align: left;
+}
+
+.result-ach-label {
+  font-weight: 900;
+  font-size: 14px;
+  color: #ef4d68;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.result-ach-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-top: 1px solid rgba(102, 75, 61, 0.07);
+}
+
+.result-ach-item:first-of-type {
+  border-top: none;
+}
+
+.result-ach-emoji {
+  font-size: 26px;
+  flex-shrink: 0;
+  width: 32px;
+  text-align: center;
+}
+
+.result-ach-info {
+  min-width: 0;
+}
+
+.result-ach-name {
+  font-weight: 850;
+  font-size: 14px;
+  color: #3a2b25;
+}
+
+.result-ach-desc {
+  font-size: 12px;
+  color: #7a6258;
+  line-height: 1.4;
+}
+
+/* ── 実績トースト（ゲーム中通知） ────────────────────────────────── */
+
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.achievement-toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 16px 40px rgba(100, 70, 56, 0.2);
+  backdrop-filter: blur(18px);
+  transform: translateX(110%);
+  opacity: 0;
+  transition:
+    transform 380ms cubic-bezier(0.34, 1.4, 0.64, 1),
+    opacity 320ms ease;
+  min-width: 220px;
+  max-width: 300px;
+}
+
+.achievement-toast.visible {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.achievement-toast.hiding {
+  transform: translateX(110%);
+  opacity: 0;
+}
+
+.toast-emoji {
+  font-size: 30px;
+  flex-shrink: 0;
+}
+
+.toast-body {
+  min-width: 0;
+}
+
+.toast-label {
+  font-size: 11px;
+  font-weight: 900;
+  color: #ef4d68;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.toast-name {
+  font-size: 15px;
+  font-weight: 850;
+  color: #3a2b25;
+}
+
 @media (max-width: 760px) {
   #app {
     padding: 10px;

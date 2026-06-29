@@ -1,8 +1,8 @@
-import type { Difficulty, Food, FoodId, GameState, Rank, Tuning } from './types'
+import type { Difficulty, Food, FoodId, GameState, Rank, RunStats, Tuning } from './types'
 
 /** Invariants shared by every difficulty. The per-run knobs live in TUNINGS. */
 export const CONFIG = {
-  gameDuration: 180,
+  gameDuration: 120,
   maxCustomers: 5,
   baseServeScore: 100,
   comboStep: 0.1,
@@ -31,7 +31,7 @@ export const TUNINGS: Record<Difficulty, Tuning> = {
     spawnEnd: 0.9,
     lostPenalty: 100,
     sharedKitchen: false,
-    rankThresholds: { S: 38000, A: 28000, B: 18000, C: 9000 },
+    rankThresholds: { S: 26000, A: 19000, B: 12000, C: 6000 },
   },
   normal: {
     label: 'Normal',
@@ -49,7 +49,7 @@ export const TUNINGS: Record<Difficulty, Tuning> = {
     spawnEnd: 0.65,
     lostPenalty: 150,
     sharedKitchen: false,
-    rankThresholds: { S: 46000, A: 33000, B: 21000, C: 10000 },
+    rankThresholds: { S: 35000, A: 25000, B: 15000, C: 7000 },
   },
   hard: {
     label: 'Hard',
@@ -67,7 +67,7 @@ export const TUNINGS: Record<Difficulty, Tuning> = {
     spawnEnd: 0.45,
     lostPenalty: 250,
     sharedKitchen: true,
-    rankThresholds: { S: 44000, A: 31000, B: 19000, C: 9000 },
+    rankThresholds: { S: 40000, A: 29000, B: 18000, C: 8000 },
   },
 }
 
@@ -142,7 +142,14 @@ export function createInitialState(
     backgroundTime: 0,
     nextCustomerId: 1,
     nextEffectId: 1,
+    runStats: createRunStats(),
+    newlyUnlocked: [],
+    achievementToasts: [],
   }
+}
+
+export function createRunStats(): RunStats {
+  return { served: 0, lost: 0, bestCombo: 0 }
 }
 
 function createFoods(startStock: number): Record<FoodId, Food> {

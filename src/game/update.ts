@@ -3,10 +3,18 @@ import {
   FOOD_ORDER,
   TUNINGS,
   createInitialState,
+  createRunStats,
   getRank,
   readHighScore,
   writeHighScore,
 } from './state'
+import {
+  evaluateEndOfRun,
+  findAchievement,
+  readLifetimeStats,
+  tryUnlockImmediate,
+  writeLifetimeStats,
+} from './achievements'
 import type { Customer, Difficulty, FloatingText, GameState, InputState } from './types'
 
 export function update(state: GameState, dt: number, input: InputState): void {
@@ -47,6 +55,9 @@ function startGame(state: GameState): void {
   Object.assign(state, fresh, {
     backgroundTime: state.backgroundTime,
     spawnTimer: 0.65,
+    runStats: createRunStats(),
+    newlyUnlocked: [],
+    achievementToasts: [],
   })
 }
 
@@ -211,7 +222,35 @@ function serveCustomer(state: GameState, customer: Customer): void {
   state.combo += 1
   state.comboPulse = 0.28
 
+  // 実績: ゲーム内カウンタを更新
+  state.runStats.served += 1
+  if (state.combo > state.runStats.bestCombo) {
+    state.runStats.bestCombo = state.combo
+  }
+
   addFloatingText(state, `+${gained}`, customer.x, customer.y - 58, 'good')
+
+  // リアルタイム解除: はじめての一皿
+  if (state.runStats.served === 1) {
+    pushImmediateToast(state, 'first_serve')
+  }
+  // リアルタイム解除: コンボ倍率 ×2.0（コンボ 10）
+  if (state.combo === 10) {
+    pushImmediateToast(state, 'combo_x2')
+  }
+  // リアルタイム解除: コンボ倍率 ×3.0（コンボ 20）
+  if (state.combo === 20) {
+    pushImmediateToast(state, 'combo_x3')
+  }
+}
+
+/** 指定IDを即時解除し、未解除だったらトーストキューに積む。 */
+function pushImmediateToast(state: GameState, id: string): void {
+  const unlockedId = tryUnlockImmediate(id)
+  if (!unlockedId) return
+  const achievement = findAchievement(id)
+  if (!achievement) return
+  state.achievementToasts.push({ id, emoji: achievement.emoji, name: achievement.name })
 }
 
 function loseCustomer(state: GameState, customer: Customer): void {
@@ -221,6 +260,8 @@ function loseCustomer(state: GameState, customer: Customer): void {
   state.comboPulse = 0.22
   state.shakeTime = 0.24
   state.flashTime = 0.18
+  // 実績: 失客カウンタ
+  state.runStats.lost += 1
   // Keep an angry face around briefly so the loss is felt, not just popped away.
   state.departing.push({
     id: customer.id,
@@ -259,4 +300,30 @@ function finishGame(state: GameState): void {
     state.highScore = state.score
     writeHighScore(state.difficulty, state.score)
   }
+
+  // 通算統計を更新して永続化する
+  const prevStats = readLifetimeStats()
+  const updatedStats = {
+    totalServed: prevStats.totalServed + state.runStats.served,
+    gamesPlayed: prevStats.gamesPlayed + 1,
+    bestCombo: Math.max(prevStats.bestCombo, state.runStats.bestCombo),
+  }
+  writeLifetimeStats(updatedStats)
+
+  // ゲーム終了時の実績を評価し、新たに解除されたIDを記録する
+  const newIds = evaluateEndOfRun({
+    runServed: state.runStats.served,
+    runLost: state.runStats.lost,
+    runBestCombo: state.runStats.bestCombo,
+    runScore: state.score,
+    rank: state.rank,
+    difficulty: state.difficulty,
+    lifetime: updatedStats,
+  })
+
+  // リアルタイムで既に解除済みのものは newlyUnlocked から除外済み（evaluateEndOfRun 内で管理）
+  state.newlyUnlocked = newIds
+
+  // リザルト画面でのみ表示する実績トーストは newlyUnlocked を使うので
+  // ゲーム中トーストはここでは積まない（render.ts がリザルトで直接参照する）
 }

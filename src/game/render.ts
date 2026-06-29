@@ -1,8 +1,16 @@
 import { CONFIG, CUSTOMER_EMOJIS, DIFFICULTY_ORDER, FOOD_ORDER, TUNINGS } from './state'
-import type { Difficulty, FoodId, GameState } from './types'
+import { ACHIEVEMENTS, findAchievement, readUnlockedIds } from './achievements'
+import type { AchievementToast, Difficulty, FoodId, GameState } from './types'
 
 type RefillHandler = (food: FoodId) => void
 type DifficultyHandler = (difficulty: Difficulty) => void
+
+/** トースト表示状態の内部管理（モジュールスコープ）。 */
+interface ActiveToast {
+  id: string
+  el: HTMLDivElement
+  timer: ReturnType<typeof setTimeout>
+}
 
 interface RendererElements {
   root: HTMLDivElement
@@ -20,9 +28,14 @@ interface RendererElements {
   resultRank: HTMLDivElement
   resultHigh: HTMLDivElement
   resultRecord: HTMLDivElement
+  resultAchievements: HTMLDivElement
   titleHigh: HTMLSpanElement
+  titleAchievementsBadge: HTMLSpanElement
+  achievementsPanel: HTMLDivElement
+  achievementsGrid: HTMLDivElement
   diffButtons: Record<Difficulty, HTMLButtonElement>
   diffBlurb: HTMLParagraphElement
+  toastContainer: HTMLDivElement
 }
 
 interface StockRow {
@@ -48,7 +61,47 @@ export function createRenderer(
   onRefill: RefillHandler,
   onSelectDifficulty: DifficultyHandler,
 ): Renderer {
-  const elements = createDom(app, onStart, onRestart, onRefill, onSelectDifficulty)
+  /** 現在表示中のトースト。同じ実績は重複表示しない。 */
+  const activeToasts = new Map<string, ActiveToast>()
+
+  function showToast(toast: AchievementToast): void {
+    if (activeToasts.has(toast.id)) return
+
+    const el = document.createElement('div')
+    el.className = 'achievement-toast'
+    el.innerHTML = `<span class="toast-emoji">${toast.emoji}</span><div class="toast-body"><div class="toast-label">実績解除！</div><div class="toast-name">${toast.name}</div></div>`
+    elements.toastContainer.append(el)
+
+    // アニメーション: 次フレームで visible クラスを付けてスライドイン
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        el.classList.add('visible')
+      })
+    })
+
+    const timer = setTimeout(() => {
+      el.classList.remove('visible')
+      el.classList.add('hiding')
+      setTimeout(() => {
+        el.remove()
+        activeToasts.delete(toast.id)
+      }, 400)
+    }, 3200)
+
+    activeToasts.set(toast.id, { id: toast.id, el, timer })
+  }
+
+  /** タイトル画面の実績パネル開閉フラグ */
+  let achievementsPanelOpen = false
+
+  function toggleAchievementsPanel(): void {
+    achievementsPanelOpen = !achievementsPanelOpen
+    refreshAchievementsGrid(elements.achievementsGrid)
+    elements.achievementsPanel.hidden = !achievementsPanelOpen
+    elements.achievementsPanel.classList.toggle('open', achievementsPanelOpen)
+  }
+
+  const elements = createDom(app, onStart, onRestart, onRefill, onSelectDifficulty, toggleAchievementsPanel)
   const context = elements.canvas.getContext('2d')
   if (!context) {
     throw new Error('Canvas 2D context is unavailable')
@@ -68,6 +121,11 @@ export function createRenderer(
 
   return {
     render(state) {
+      // トーストキューを消化する
+      while (state.achievementToasts.length > 0) {
+        const toast = state.achievementToasts.shift()!
+        showToast(toast)
+      }
       renderDom(elements, state)
       renderCanvas(ctx, state)
     },
@@ -81,6 +139,7 @@ function createDom(
   onRestart: () => void,
   onRefill: RefillHandler,
   onSelectDifficulty: DifficultyHandler,
+  onToggleAchievements: () => void,
 ): RendererElements {
   app.innerHTML = ''
 
@@ -92,7 +151,7 @@ function createDom(
   title.innerHTML = `
     <div class="title-mark">🍽️</div>
     <h1>Panic Buffet</h1>
-    <p class="lead">3分間、在庫を切らさずお客の波をさばくビュッフェ管理ゲーム。</p>
+    <p class="lead">2分間、在庫を切らさずお客の波をさばくビュッフェ管理ゲーム。</p>
     <div class="how-to">
       <span>🍕 1</span>
       <span>🍝 2</span>
@@ -100,6 +159,20 @@ function createDom(
     </div>
     <p class="high-note">最高スコア <span data-title-high>0</span></p>
   `
+
+  // 実績パネル
+  const achievementsPanel = document.createElement('div')
+  achievementsPanel.className = 'achievements-panel'
+  achievementsPanel.hidden = true
+
+  const achPanelHeader = document.createElement('div')
+  achPanelHeader.className = 'achievements-panel-header'
+  achPanelHeader.innerHTML = '<span>🏅 実績</span>'
+
+  const achievementsGrid = document.createElement('div')
+  achievementsGrid.className = 'achievements-grid'
+
+  achievementsPanel.append(achPanelHeader, achievementsGrid)
 
   const difficultyWrap = document.createElement('div')
   difficultyWrap.className = 'difficulty'
@@ -121,6 +194,17 @@ function createDom(
   title.insertBefore(difficultyWrap, highNote)
   title.insertBefore(diffBlurb, highNote)
 
+  // 実績トグルボタン（ハイスコアの直前に配置）
+  const achievementsToggle = document.createElement('button')
+  achievementsToggle.className = 'achievements-toggle'
+  achievementsToggle.type = 'button'
+  achievementsToggle.innerHTML = `🏅 実績 <span class="achievements-badge" data-achievements-badge>0/${ACHIEVEMENTS.length}</span>`
+  achievementsToggle.addEventListener('click', onToggleAchievements)
+
+  const highNoteForAch = title.querySelector('.high-note') as HTMLParagraphElement
+  title.insertBefore(achievementsToggle, highNoteForAch)
+  title.insertBefore(achievementsPanel, highNoteForAch)
+
   const startButton = document.createElement('button')
   startButton.className = 'primary-button'
   startButton.id = 'start-btn'
@@ -134,7 +218,7 @@ function createDom(
   const hud = document.createElement('div')
   hud.className = 'hud'
   hud.innerHTML = `
-    <div class="hud-item timer">⏱ <span data-hud-time>180.0</span></div>
+    <div class="hud-item timer">⏱ <span data-hud-time>120.0</span></div>
     <div class="hud-item">💰 <span data-hud-score>0</span></div>
     <div class="hud-item combo">🔥 <span data-hud-combo>0</span></div>
     <div class="hud-item">🏆 <span data-hud-high>0</span></div>
@@ -191,6 +275,13 @@ function createDom(
     <div class="result-record" data-result-record></div>
     <div class="result-high" data-result-high>最高 0</div>
   `
+
+  // 今回解除した実績リスト（ゲーム終了時のみ表示）
+  const resultAchievements = document.createElement('div')
+  resultAchievements.className = 'result-achievements'
+  resultAchievements.hidden = true
+  result.append(resultAchievements)
+
   const restartButton = document.createElement('button')
   restartButton.className = 'primary-button'
   restartButton.id = 'restart-btn'
@@ -199,8 +290,12 @@ function createDom(
   restartButton.addEventListener('click', onRestart)
   result.append(restartButton)
 
+  // トーストコンテナ（ゲーム中の実績通知）
+  const toastContainer = document.createElement('div')
+  toastContainer.className = 'toast-container'
+
   root.append(title, play, result)
-  app.append(root)
+  app.append(root, toastContainer)
 
   return {
     root,
@@ -218,9 +313,14 @@ function createDom(
     resultRank: result.querySelector('[data-result-rank]') as HTMLDivElement,
     resultHigh: result.querySelector('[data-result-high]') as HTMLDivElement,
     resultRecord: result.querySelector('[data-result-record]') as HTMLDivElement,
+    resultAchievements,
     titleHigh: title.querySelector('[data-title-high]') as HTMLSpanElement,
+    titleAchievementsBadge: title.querySelector('[data-achievements-badge]') as HTMLSpanElement,
+    achievementsPanel,
+    achievementsGrid,
     diffButtons,
     diffBlurb,
+    toastContainer,
   }
 }
 
@@ -269,6 +369,57 @@ function renderDom(elements: RendererElements, state: GameState): void {
   elements.resultHigh.textContent = `最高 ${formatNumber(state.highScore)} ・ ${state.tuning.emoji} ${state.tuning.label}`
   elements.resultRecord.textContent = state.newRecord ? '最高更新！' : ''
   elements.result.classList.toggle('new-record', state.newRecord)
+
+  // リザルト画面: 今回解除した実績を列挙する
+  renderResultAchievements(elements.resultAchievements, state.newlyUnlocked)
+
+  // タイトル画面: 実績バッジ（解除数/全体数）を更新する
+  const unlockedCount = readUnlockedIds().size
+  elements.titleAchievementsBadge.textContent = `${unlockedCount}/${ACHIEVEMENTS.length}`
+}
+
+/** リザルト画面: 今回の新規解除実績を表示する。 */
+function renderResultAchievements(container: HTMLDivElement, newlyUnlocked: string[]): void {
+  container.hidden = newlyUnlocked.length === 0
+  if (newlyUnlocked.length === 0) return
+
+  // 内容が変わっていない場合は再描画しない（IDを確認）
+  const prev = container.dataset.ids ?? ''
+  const next = newlyUnlocked.join(',')
+  if (prev === next) return
+  container.dataset.ids = next
+
+  container.innerHTML = '<div class="result-ach-label">✨ 実績解除！</div>'
+  for (const id of newlyUnlocked) {
+    const ach = findAchievement(id)
+    if (!ach) continue
+    const item = document.createElement('div')
+    item.className = 'result-ach-item'
+    item.innerHTML = `<span class="result-ach-emoji">${ach.emoji}</span><div class="result-ach-info"><div class="result-ach-name">${ach.name}</div><div class="result-ach-desc">${ach.description}</div></div>`
+    container.append(item)
+  }
+}
+
+/**
+ * タイトル画面の実績グリッドを最新の解除状態で描画する。
+ * ボタンクリック時に呼ばれる（毎フレームではない）。
+ */
+function refreshAchievementsGrid(grid: HTMLDivElement): void {
+  grid.innerHTML = ''
+  const unlockedIds = readUnlockedIds()
+  for (const ach of ACHIEVEMENTS) {
+    const unlocked = unlockedIds.has(ach.id)
+    const item = document.createElement('div')
+    item.className = `ach-item${unlocked ? ' unlocked' : ' locked'}`
+    if (unlocked) {
+      item.innerHTML = `<span class="ach-emoji">${ach.emoji}</span><div class="ach-info"><div class="ach-name">${ach.name}</div><div class="ach-desc">${ach.description}</div></div>`
+    } else if (ach.secret) {
+      item.innerHTML = `<span class="ach-emoji locked-emoji">🔒</span><div class="ach-info"><div class="ach-name">???</div><div class="ach-desc">秘密の実績</div></div>`
+    } else {
+      item.innerHTML = `<span class="ach-emoji locked-emoji">🔒</span><div class="ach-info"><div class="ach-name">${ach.name}</div><div class="ach-desc">${ach.description}</div></div>`
+    }
+    grid.append(item)
+  }
 }
 
 function renderCanvas(ctx: CanvasRenderingContext2D, state: GameState): void {

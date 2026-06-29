@@ -78,6 +78,20 @@ export interface InputState {
   selectedDifficulty?: Difficulty
 }
 
+/** 1ゲーム分の内部カウンタ（実績計算に使う）。 */
+export interface RunStats {
+  served: number
+  lost: number
+  bestCombo: number
+}
+
+/** 実績トースト1件分のデータ。render.ts がキューを読んで表示する。 */
+export interface AchievementToast {
+  id: string
+  emoji: string
+  name: string
+}
+
 export interface GameState {
   scene: Scene
   difficulty: Difficulty
@@ -102,4 +116,10 @@ export interface GameState {
   backgroundTime: number
   nextCustomerId: number
   nextEffectId: number
+  /** 今回のゲームの内部カウンタ（実績計算用）。 */
+  runStats: RunStats
+  /** 今回のゲームで新たに解除された実績ID（リザルト画面表示用）。 */
+  newlyUnlocked: string[]
+  /** ゲーム中にキューイングされたトースト。renderDom が読み出して消化する。 */
+  achievementToasts: AchievementToast[]
 }
