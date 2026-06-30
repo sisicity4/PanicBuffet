@@ -6,6 +6,10 @@
 </p>
 
 <p align="center">
+  <a href="https://sisicity4.github.io/PanicBuffet/"><b>▶ ブラウザで今すぐ遊ぶ</b></a>
+</p>
+
+<p align="center">
   <img src="docs/demo.gif" alt="Panic Buffet gameplay" width="600"><br>
   <sub>▲ 実際のプレイ画面（タイトル → ラッシュをさばく様子）</sub>
 </p>
@@ -14,6 +18,7 @@
   <img alt="Vite" src="https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white">
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white">
   <img alt="No deps" src="https://img.shields.io/badge/runtime%20deps-0-2fc48d">
+  <a href="https://sisicity4.github.io/PanicBuffet/"><img alt="Play" src="https://img.shields.io/badge/▶_Play-live_demo-ff5c5c"></a>
 </p>
 
 ---
