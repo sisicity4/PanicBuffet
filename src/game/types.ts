@@ -92,6 +92,13 @@ export interface AchievementToast {
   name: string
 }
 
+/** ローカルランキングの1エントリ（難易度別にトップ5を localStorage 保存）。 */
+export interface LeaderboardEntry {
+  score: number
+  rank: Rank
+  date: string
+}
+
 export interface GameState {
   scene: Scene
   difficulty: Difficulty
@@ -122,4 +129,8 @@ export interface GameState {
   newlyUnlocked: string[]
   /** ゲーム中にキューイングされたトースト。renderDom が読み出して消化する。 */
   achievementToasts: AchievementToast[]
+  /** 今回の難易度のトップ5（リザルトで表示）。プレイ中は空。 */
+  leaderboard: LeaderboardEntry[]
+  /** 今回のスコアがランクインした順位（0始まり、圏外は -1）。 */
+  leaderboardPlace: number
 }

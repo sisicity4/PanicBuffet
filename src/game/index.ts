@@ -38,5 +38,7 @@ export {
   readHighScore,
   writeHighScore,
 } from './state'
+export type { LeaderboardEntry } from './types'
+export { LEADERBOARD_SIZE, readLeaderboard, recordScore } from './leaderboard'
 export { update } from './update'
 export { createRenderer } from './render'

@@ -29,6 +29,7 @@ interface RendererElements {
   resultHigh: HTMLDivElement
   resultRecord: HTMLDivElement
   resultAchievements: HTMLDivElement
+  resultLeaderboard: HTMLDivElement
   titleHigh: HTMLSpanElement
   titleAchievementsBadge: HTMLSpanElement
   achievementsPanel: HTMLDivElement
@@ -282,6 +283,11 @@ function createDom(
   resultAchievements.hidden = true
   result.append(resultAchievements)
 
+  const resultLeaderboard = document.createElement('div')
+  resultLeaderboard.className = 'result-leaderboard'
+  resultLeaderboard.hidden = true
+  result.append(resultLeaderboard)
+
   const restartButton = document.createElement('button')
   restartButton.className = 'primary-button'
   restartButton.id = 'restart-btn'
@@ -314,6 +320,7 @@ function createDom(
     resultHigh: result.querySelector('[data-result-high]') as HTMLDivElement,
     resultRecord: result.querySelector('[data-result-record]') as HTMLDivElement,
     resultAchievements,
+    resultLeaderboard,
     titleHigh: title.querySelector('[data-title-high]') as HTMLSpanElement,
     titleAchievementsBadge: title.querySelector('[data-achievements-badge]') as HTMLSpanElement,
     achievementsPanel,
@@ -373,6 +380,9 @@ function renderDom(elements: RendererElements, state: GameState): void {
   // リザルト画面: 今回解除した実績を列挙する
   renderResultAchievements(elements.resultAchievements, state.newlyUnlocked)
 
+  // リザルト画面: 難易度別ローカルランキング（トップ5、今回の順位をハイライト）
+  renderResultLeaderboard(elements.resultLeaderboard, state)
+
   // タイトル画面: 実績バッジ（解除数/全体数）を更新する
   const unlockedCount = readUnlockedIds().size
   elements.titleAchievementsBadge.textContent = `${unlockedCount}/${ACHIEVEMENTS.length}`
@@ -398,6 +408,38 @@ function renderResultAchievements(container: HTMLDivElement, newlyUnlocked: stri
     item.innerHTML = `<span class="result-ach-emoji">${ach.emoji}</span><div class="result-ach-info"><div class="result-ach-name">${ach.name}</div><div class="result-ach-desc">${ach.description}</div></div>`
     container.append(item)
   }
+}
+
+const MEDALS = ['🥇', '🥈', '🥉']
+
+/** リザルトの難易度別トップ5。今回ランクインした行をハイライトする。 */
+function renderResultLeaderboard(container: HTMLDivElement, state: GameState): void {
+  container.hidden = state.leaderboard.length === 0
+  if (state.leaderboard.length === 0) return
+
+  // 同じ内容なら再描画しない（スコア列＋ハイライト位置で判定）
+  const signature = `${state.leaderboardPlace}:${state.leaderboard.map((e) => e.score).join(',')}`
+  if (container.dataset.sig === signature) return
+  container.dataset.sig = signature
+
+  const placed = state.leaderboardPlace >= 0
+  const heading = placed
+    ? `🏅 ランキング ${state.leaderboardPlace + 1}位！`
+    : '🏅 ランキング'
+  container.innerHTML = `<div class="result-lb-label">${heading}</div>`
+
+  state.leaderboard.forEach((entry, index) => {
+    const row = document.createElement('div')
+    row.className = 'result-lb-row'
+    if (index === state.leaderboardPlace) row.classList.add('current')
+    const place = MEDALS[index] ?? `${index + 1}`
+    row.innerHTML =
+      `<span class="result-lb-place">${place}</span>` +
+      `<span class="result-lb-score">${formatNumber(entry.score)}</span>` +
+      `<span class="result-lb-rank">${entry.rank}</span>` +
+      `<span class="result-lb-date">${entry.date}</span>`
+    container.append(row)
+  })
 }
 
 /**

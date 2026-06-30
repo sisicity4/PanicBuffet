@@ -145,6 +145,8 @@ export function createInitialState(
     runStats: createRunStats(),
     newlyUnlocked: [],
     achievementToasts: [],
+    leaderboard: [],
+    leaderboardPlace: -1,
   }
 }
 

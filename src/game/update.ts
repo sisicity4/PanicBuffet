@@ -15,6 +15,7 @@ import {
   tryUnlockImmediate,
   writeLifetimeStats,
 } from './achievements'
+import { recordScore } from './leaderboard'
 import type { Customer, Difficulty, FloatingText, GameState, InputState } from './types'
 
 export function update(state: GameState, dt: number, input: InputState): void {
@@ -300,6 +301,12 @@ function finishGame(state: GameState): void {
     state.highScore = state.score
     writeHighScore(state.difficulty, state.score)
   }
+
+  // ローカルランキングに登録し、トップ5と今回の順位をリザルト用に保持
+  const date = new Date().toISOString().slice(0, 10)
+  const { entries, placedIndex } = recordScore(state.difficulty, state.score, state.rank, date)
+  state.leaderboard = entries
+  state.leaderboardPlace = placedIndex
 
   // 通算統計を更新して永続化する
   const prevStats = readLifetimeStats()

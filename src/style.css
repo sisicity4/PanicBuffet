@@ -63,6 +63,14 @@ button {
   backdrop-filter: blur(18px);
 }
 
+/* リザルトは実績＋ランキングで縦に伸びるので、はみ出したら内部スクロール。 */
+.scene-result {
+  align-content: start;
+  gap: 14px;
+  max-height: calc(100svh - 40px);
+  overflow-y: auto;
+}
+
 .title-mark {
   width: 92px;
   height: 92px;
@@ -644,6 +652,68 @@ h1 {
   font-size: 12px;
   color: #7a6258;
   line-height: 1.4;
+}
+
+/* ── リザルトのローカルランキング ────────────────────────────────── */
+
+.result-leaderboard {
+  width: 100%;
+  max-width: 480px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 12px 16px;
+  text-align: left;
+}
+
+.result-lb-label {
+  font-weight: 900;
+  font-size: 14px;
+  color: #ef4d68;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.result-lb-row {
+  display: grid;
+  grid-template-columns: 36px 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: 10px;
+  border-top: 1px solid rgba(102, 75, 61, 0.07);
+  color: #5b463d;
+}
+
+.result-lb-row:first-of-type {
+  border-top: none;
+}
+
+.result-lb-row.current {
+  background: linear-gradient(135deg, rgba(255, 122, 89, 0.16), rgba(239, 77, 104, 0.16));
+  color: #2f241f;
+  font-weight: 800;
+}
+
+.result-lb-place {
+  font-size: 18px;
+  text-align: center;
+}
+
+.result-lb-score {
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+}
+
+.result-lb-rank {
+  font-weight: 900;
+  color: #ef7a3a;
+}
+
+.result-lb-date {
+  font-size: 11px;
+  color: #9a857b;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── 実績トースト（ゲーム中通知） ────────────────────────────────── */
